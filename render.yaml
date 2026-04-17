@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: hivemind
+    name: hive-memory
     runtime: docker
     dockerfilePath: ./Dockerfile
     plan: free

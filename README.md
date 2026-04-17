@@ -45,7 +45,7 @@ headers = {
 
 ## API Reference
 
-Base URL (production): `https://hivemind.onrender.com`
+Base URL (production): `https://hive-memory.onrender.com`
 Interactive docs: `/docs` (Swagger) or `/redoc`
 
 ### Store a memory entry
