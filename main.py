@@ -20,7 +20,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import FastAPI, Header, HTTPException, Query, Request, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse
 
 import auth
@@ -60,6 +60,45 @@ SERVICE_VERSION = "1.0.0"
 # x402 pricing constants
 PRICE_STORE_PER_KB = 0.0001   # USDC per KB stored
 PRICE_RETRIEVE_PER_KB = 0.00005  # USDC per KB retrieved
+
+HIVE_INTERNAL_KEY = "hive_internal_125e04e071e8829be631ea0216dd4a0c9b707975fcecaf8c62c6a2ab43327d46"
+
+
+# ─────────────────────────────────────────────
+# x402 payment gate
+# ─────────────────────────────────────────────
+
+def x402_gate(price_usd: float, description: str):
+    """Returns a FastAPI dependency that enforces x402 payment or internal key bypass."""
+    async def dependency(
+        request: Request,
+        x_payment: str = Header(None),
+        x_hive_internal: str = Header(None),
+        x_api_key: str = Header(None)
+    ):
+        # Internal bypass
+        if x_hive_internal == HIVE_INTERNAL_KEY or x_api_key == HIVE_INTERNAL_KEY:
+            return {"bypassed": True, "amount": 0}
+        # Payment present — accept (in production, verify cryptographically)
+        if x_payment:
+            return {"verified": True, "amount": price_usd}
+        # No payment — return 402
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "error": "payment_required",
+                "x402": {
+                    "version": "1.0",
+                    "amount_usdc": price_usd,
+                    "description": description,
+                    "payment_methods": ["x402-usdc", "x402-aleo"],
+                    "headers_required": ["X-Payment"],
+                    "settlement_wallet": "0x78B3B3C356E89b5a69C488c6032509Ef4260B6bf",
+                    "network": "base"
+                }
+            }
+        )
+    return dependency
 
 
 # ─────────────────────────────────────────────
@@ -138,6 +177,7 @@ async def store_memory(
     x_hive_did: Optional[str] = Header(None),
     x_hive_sig: Optional[str] = Header(None),
     x_hive_timestamp: Optional[str] = Header(None),
+    _payment=Depends(x402_gate(0.01, "Sovereign memory write — AES-256-GCM encrypted, DID-owned")),
 ):
     did = _require_auth(x_hive_did, x_hive_sig, x_hive_timestamp)
 
