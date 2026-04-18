@@ -55,7 +55,7 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-SERVICE_VERSION = "1.0.0"
+SERVICE_VERSION = "1.0.1"
 
 # x402 pricing constants
 PRICE_STORE_PER_KB = 0.0001   # USDC per KB stored
